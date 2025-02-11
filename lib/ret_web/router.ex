@@ -8,6 +8,34 @@ defmodule RetWeb.Router do
     |> Application.compile_env!(__MODULE__)
     |> Keyword.fetch!(:secure?)
 
+  # [BELIVVR Custom] Add option to block root and signin pages
+  # Reticulum Route Block Option, change to true in .env file and restart reticulum container after setting up XRCLOUD account.
+  block_routes? =
+    System.get_env("BLOCK_ROOT_SIGNIN", "false") == "true"
+
+  pipeline :check_blocked_routes do
+    if block_routes? do
+      plug :block_routes
+    end
+  end
+
+  def block_routes(conn, _opts) do
+    case conn.request_path do
+      "/" ->
+        conn
+        |> put_status(403)
+        |> text("Forbidden")
+        |> halt()
+      "/signin" ->
+        conn
+        |> put_status(403)
+        |> text("Forbidden")
+        |> halt()
+      _ ->
+        conn
+    end
+  end
+
   pipeline :secure_headers do
     plug :put_secure_browser_headers
     plug RetWeb.Plugs.AddCSP
@@ -243,29 +271,29 @@ defmodule RetWeb.Router do
   end
 
   scope "/", RetWeb do
-    pipe_through [:strict_secure_headers, :parsed_body, :browser] ++
-                   if(secure?, do: [:ssl_only], else: [])
+    pipe_through [:strict_secure_headers, :parsed_body, :browser, :check_blocked_routes] ++
+                   if(secure?, do: [:ssl_only, :canonicalize_domain], else: [])
 
     head "/files/:id", FileController, :head
     get "/files/:id", FileController, :show
   end
 
   scope "/", RetWeb do
-    pipe_through [:secure_headers, :parsed_body, :browser] ++
+    pipe_through [:secure_headers, :parsed_body, :browser, :check_blocked_routes] ++
                    if(secure?, do: [:ssl_only, :canonicalize_domain], else: [])
 
     get "/link", PageController, only: [:index]
   end
 
   scope "/", RetWeb do
-    pipe_through [:secure_headers, :parsed_body, :browser, :rate_limit] ++
+    pipe_through [:secure_headers, :parsed_body, :browser, :rate_limit, :check_blocked_routes] ++
                    if(secure?, do: [:ssl_only, :canonicalize_domain], else: [])
 
     get "/link/*path", PageController, only: [:index]
   end
 
   scope "/", RetWeb do
-    pipe_through [:secure_headers, :parsed_body, :browser] ++
+    pipe_through [:secure_headers, :parsed_body, :browser, :check_blocked_routes] ++
                    if(secure?, do: [:ssl_only, :canonicalize_domain], else: [])
 
     get "/*path", PageController, only: [:index]

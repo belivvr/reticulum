@@ -33,4 +33,5 @@ docker run --log-opt max-size=10m --log-opt max-file=3 -d --restart=always --nam
     -e HUBS_CLIENT_INTERNAL_HOSTNAME="$HUBS_CLIENT_INTERNAL_HOSTNAME" \
     -e SPOKE_INTERNAL_HOSTNAME="$SPOKE_INTERNAL_HOSTNAME" \
     -e POSTGREST_INTERNAL_HOSTNAME="$POSTGREST_INTERNAL_HOSTNAME" \
+    -e BLOCK_ROOT_SIGNIN="$BLOCK_ROOT_SIGNIN" \
     reticulum sh -c "mix phx.server"
